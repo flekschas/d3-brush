@@ -8,7 +8,9 @@ import BrushEvent from "./event";
 import noevent, {nopropagation} from "./noevent";
 
 var MODE_DRAG = {name: "drag"},
-    MODE_HANDLE = {name: "handle"};
+    MODE_SPACE = {name: "space"},
+    MODE_HANDLE = {name: "handle"},
+    MODE_CENTER = {name: "center"};
 
 var X = {
   name: "x",
@@ -118,19 +120,19 @@ export function brushSelection(node) {
   return state ? state.dim.output(state.selection) : null;
 }
 
-export function brushX() {
-  return brush(X);
+export function brushX(noKeyModifiers) {
+  return brush(X, noKeyModifiers);
 }
 
-export function brushY() {
-  return brush(Y);
+export function brushY(noKeyModifiers) {
+  return brush(Y, noKeyModifiers);
 }
 
-export default function() {
-  return brush(XY);
+export default function(noKeyModifiers) {
+  return brush(XY, noKeyModifiers);
 }
 
-function brush(dim) {
+function brush(dim, noKeyModifiers) {
   var extent = defaultExtent,
       filter = defaultFilter,
       listeners = dispatch(brush, "start", "brush", "end"),
@@ -292,7 +294,7 @@ function brush(dim) {
 
     var that = this,
         type = event.target.__data__.type,
-        mode = type === "selection" ? MODE_DRAG : MODE_HANDLE,
+        mode = (event.metaKey && !noKeyModifiers ? type = "overlay" : type) === "selection" ? MODE_DRAG : (event.altKey && !noKeyModifiers ? MODE_CENTER : MODE_HANDLE),
         signX = dim === Y ? null : signsX[type],
         signY = dim === X ? null : signsY[type],
         state = local(that),
@@ -341,10 +343,13 @@ function brush(dim) {
           .on("touchend.brush touchcancel.brush", ended, true);
     } else {
       var view = select(event.view)
-          // .on("keydown.brush", keydowned, true)
-          // .on("keyup.brush", keyupped, true)
           .on("mousemove.brush", moved, true)
           .on("mouseup.brush", ended, true);
+
+      if (!noKeyModifiers) {
+        view.on("keydown.brush", keydowned, true)
+            .on("keyup.brush", keyupped, true);
+      }
 
       dragDisable(event.view);
     }
@@ -373,6 +378,7 @@ function brush(dim) {
       dy = point[1] - point0[1];
 
       switch (mode) {
+        case MODE_SPACE:
         case MODE_DRAG: {
           if (signX) dx = Math.max(W - w0, Math.min(E - e0, dx)), w1 = w0 + dx, e1 = e0 + dx;
           if (signY) dy = Math.max(N - n0, Math.min(S - s0, dy)), n1 = n0 + dy, s1 = s0 + dy;
@@ -383,6 +389,11 @@ function brush(dim) {
           else if (signX > 0) dx = Math.max(W - e0, Math.min(E - e0, dx)), w1 = w0, e1 = e0 + dx;
           if (signY < 0) dy = Math.max(N - n0, Math.min(S - n0, dy)), n1 = n0 + dy, s1 = s0;
           else if (signY > 0) dy = Math.max(N - s0, Math.min(S - s0, dy)), n1 = n0, s1 = s0 + dy;
+          break;
+        }
+        case MODE_CENTER: {
+          if (signX) w1 = Math.max(W, Math.min(E, w0 - dx * signX)), e1 = Math.max(W, Math.min(E, e0 + dx * signX));
+          if (signY) n1 = Math.max(N, Math.min(S, n0 - dy * signY)), s1 = Math.max(N, Math.min(S, s0 + dy * signY));
           break;
         }
       }
@@ -431,6 +442,75 @@ function brush(dim) {
       if (state.selection) selection = state.selection; // May be set by brush.move (on start)!
       if (empty(selection)) state.selection = null, redraw.call(that);
       emit.end();
+    }
+
+    function keydowned() {
+      switch (event.keyCode) {
+        case 16: { // SHIFT
+          shifting = signX && signY;
+          break;
+        }
+        case 18: { // ALT
+          if (mode === MODE_HANDLE) {
+            if (signX) e0 = e1 - dx * signX, w0 = w1 + dx * signX;
+            if (signY) s0 = s1 - dy * signY, n0 = n1 + dy * signY;
+            mode = MODE_CENTER;
+            move();
+          }
+          break;
+        }
+        case 32: { // SPACE; takes priority over ALT
+          if (mode === MODE_HANDLE || mode === MODE_CENTER) {
+            if (signX < 0) e0 = e1 - dx; else if (signX > 0) w0 = w1 - dx;
+            if (signY < 0) s0 = s1 - dy; else if (signY > 0) n0 = n1 - dy;
+            mode = MODE_SPACE;
+            overlay.attr("cursor", cursors.selection);
+            move();
+          }
+          break;
+        }
+        default: return;
+      }
+      noevent();
+    }
+
+    function keyupped() {
+      switch (event.keyCode) {
+        case 16: { // SHIFT
+          if (shifting) {
+            lockX = lockY = shifting = false;
+            move();
+          }
+          break;
+        }
+        case 18: { // ALT
+          if (mode === MODE_CENTER) {
+            if (signX < 0) e0 = e1; else if (signX > 0) w0 = w1;
+            if (signY < 0) s0 = s1; else if (signY > 0) n0 = n1;
+            mode = MODE_HANDLE;
+            move();
+          }
+          break;
+        }
+        case 32: { // SPACE
+          if (mode === MODE_SPACE) {
+            if (event.altKey) {
+              if (signX) e0 = e1 - dx * signX, w0 = w1 + dx * signX;
+              if (signY) s0 = s1 - dy * signY, n0 = n1 + dy * signY;
+              mode = MODE_CENTER;
+            } else {
+              if (signX < 0) e0 = e1; else if (signX > 0) w0 = w1;
+              if (signY < 0) s0 = s1; else if (signY > 0) n0 = n1;
+              mode = MODE_HANDLE;
+            }
+            overlay.attr("cursor", cursors[type]);
+            move();
+          }
+          break;
+        }
+        default: return;
+      }
+      noevent();
     }
   }
 
