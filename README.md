@@ -1,6 +1,23 @@
 # d3-brush
 
-> This is a slightly modified version of the original library, which add support for disabling all keyModifier by passing in a boolean variable to `brush(disableKeyModifier)`, `brushX(disableKeyModifier)`, and `brushY(disableKeyModifier)`. If `disableKeyModifier === true` all key modifier are disabled.
+> This is a slightly modified version of the original library, which add support for disabling all key modifier and other nifty things. See below for details.
+
+### Changes and Additions
+
+```javascript
+import { brush } from 'd3-brush';
+
+// If `noKeyModifier === true` all key modifier (e.g., _ALT_, _SHIFT_, and _SPACE_) are disabled.
+const noKeyModifier = true;
+
+// If `noNew === true` brushes can be modified but not created from scratch. This can be useful fo secondary or supporting brushes.
+const noNew = true;
+
+const brushBehavior = brush(noKeyModifier, noNew)
+  .on('brush', () => console.log('brush that thing'));
+```
+
+---
 
 Brushing is the interactive specification a one- or two-dimensional selected region using a pointing gesture, such as by clicking and dragging the mouse. Brushing is often used to select discrete elements, such as dots in a scatterplot or files on a desktop. It can also be used to zoom-in to a region of interest, or to select continuous regions for [cross-filtering data](http://square.github.io/crossfilter/) or live histograms:
 

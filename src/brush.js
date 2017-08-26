@@ -120,19 +120,19 @@ export function brushSelection(node) {
   return state ? state.dim.output(state.selection) : null;
 }
 
-export function brushX(noKeyModifiers) {
-  return brush(X, noKeyModifiers);
+export function brushX(noKeyModifiers, noNew) {
+  return brush(X, noKeyModifiers, noNew);
 }
 
-export function brushY(noKeyModifiers) {
-  return brush(Y, noKeyModifiers);
+export function brushY(noKeyModifiers, noNew) {
+  return brush(Y, noKeyModifiers, noNew);
 }
 
-export default function(noKeyModifiers) {
-  return brush(XY, noKeyModifiers);
+export default function(noKeyModifiers, noNew) {
+  return brush(XY, noKeyModifiers, noNew);
 }
 
-function brush(dim, noKeyModifiers) {
+function brush(dim, noKeyModifiers, noNew) {
   var extent = defaultExtent,
       filter = defaultFilter,
       listeners = dispatch(brush, "start", "brush", "end"),
@@ -148,7 +148,7 @@ function brush(dim, noKeyModifiers) {
     overlay.enter().append("rect")
         .attr("class", "overlay")
         .attr("pointer-events", "all")
-        .attr("cursor", cursors.overlay)
+        .attr("cursor", noNew ? 'default' : cursors.overlay)
       .merge(overlay)
         .each(function() {
           var extent = local(this).extent;
@@ -161,7 +161,8 @@ function brush(dim, noKeyModifiers) {
 
     group.selectAll(".selection")
       .data([type("selection")])
-      .enter().append("rect")
+      .enter()
+      .append("rect")
         .attr("class", "selection")
         .attr("cursor", cursors.selection)
         .attr("fill", "#777")
@@ -182,8 +183,15 @@ function brush(dim, noKeyModifiers) {
         .each(redraw)
         .attr("fill", "none")
         .attr("pointer-events", "all")
-        .style("-webkit-tap-highlight-color", "rgba(0,0,0,0)")
-        .on("mousedown.brush touchstart.brush", started);
+        .style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
+
+    if (noNew) {
+      group.on("mousedown.brush touchstart.brush", function(...args) {
+        event.target.__data__.type !== 'overlay' && started.apply(this, args);
+      });
+    } else {
+      group.on("mousedown.brush touchstart.brush", started);
+    }
   }
 
   brush.move = function(group, selection) {
