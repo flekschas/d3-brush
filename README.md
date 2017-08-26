@@ -13,7 +13,10 @@ const noKeyModifier = true;
 // If `noNew === true` brushes can be modified but not created from scratch. This can be useful fo secondary or supporting brushes.
 const noNew = true;
 
-const brushBehavior = brush(noKeyModifier, noNew)
+// If `noEventBlocking === true` pointer events will not be blocked. This can be useful when multiple brushes are applied to one container.
+const noEventBlocking = true;
+
+const brushBehavior = brush(noKeyModifier, noNew, noEventBlocking)
   .on('brush', () => console.log('brush that thing'));
 ```
 

@@ -120,19 +120,19 @@ export function brushSelection(node) {
   return state ? state.dim.output(state.selection) : null;
 }
 
-export function brushX(noKeyModifiers, noNew) {
-  return brush(X, noKeyModifiers, noNew);
+export function brushX(noKeyModifiers, noNew, noEventBlocking) {
+  return brush(X, noKeyModifiers, noNew, noEventBlocking);
 }
 
-export function brushY(noKeyModifiers, noNew) {
-  return brush(Y, noKeyModifiers, noNew);
+export function brushY(noKeyModifiers, noNew, noEventBlocking) {
+  return brush(Y, noKeyModifiers, noNew, noEventBlocking);
 }
 
-export default function(noKeyModifiers, noNew) {
-  return brush(XY, noKeyModifiers, noNew);
+export default function(noKeyModifiers, noNew, noEventBlocking) {
+  return brush(XY, noKeyModifiers, noNew, noEventBlocking);
 }
 
-function brush(dim, noKeyModifiers, noNew) {
+function brush(dim, noKeyModifiers, noNew, noEventBlocking) {
   var extent = defaultExtent,
       filter = defaultFilter,
       listeners = dispatch(brush, "start", "brush", "end"),
@@ -147,7 +147,7 @@ function brush(dim, noKeyModifiers, noNew) {
 
     overlay.enter().append("rect")
         .attr("class", "overlay")
-        .attr("pointer-events", "all")
+        .attr("pointer-events", noEventBlocking ? "auto" : "all")
         .attr("cursor", noNew ? 'default' : cursors.overlay)
       .merge(overlay)
         .each(function() {
@@ -182,7 +182,7 @@ function brush(dim, noKeyModifiers, noNew) {
     group
         .each(redraw)
         .attr("fill", "none")
-        .attr("pointer-events", "all")
+        .attr("pointer-events", noEventBlocking ? "auto" : "all")
         .style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
 
     if (noNew) {
