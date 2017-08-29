@@ -186,8 +186,8 @@ function brush(dim, noKeyModifiers, noNew, noEventBlocking) {
         .style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
 
     if (noNew) {
-      group.on("mousedown.brush touchstart.brush", function(...args) {
-        event.target.__data__.type !== 'overlay' && started.apply(this, args);
+      group.on("mousedown.brush touchstart.brush", function() {
+        event.target.__data__.type !== 'overlay' && started.apply(this, arguments);
       });
     } else {
       group.on("mousedown.brush touchstart.brush", started);
